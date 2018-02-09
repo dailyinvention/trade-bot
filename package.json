@@ -1,0 +1,14 @@
+{
+  "name": "tradebot",
+  "version": "1.0.0",
+  "description": "My attempt a cryptocurrency trading bot.",
+  "main": "runbot.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "author": "Stefan Holodnick",
+  "license": "GPL-2.0",
+  "dependencies": {
+    "gdax": "^0.5.1"
+  }
+}
