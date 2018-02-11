@@ -9,6 +9,7 @@
   "author": "Stefan Holodnick",
   "license": "GPL-2.0",
   "dependencies": {
-    "gdax": "^0.5.1"
+    "gdax": "^0.5.1",
+    "redis": "^2.8.0"
   }
 }
