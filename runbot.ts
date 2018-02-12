@@ -1,6 +1,7 @@
 import * as GDAX from 'gdax'
 import * as redis from 'redis'
 import * as mongodb from 'mongodb'
+import Promise from 'bluebird'
 
 const MongoClient = mongodb.MongoClient
 const mongoURL = 'mongodb://localhost:27017'
@@ -28,6 +29,8 @@ interface mongoObj {
 interface mongoItemsObj {
   starttime: Date,
   endtime: Date,
+  startprice: number,
+  endprice: number,
   buys: number,
   sells: number
 }
@@ -53,7 +56,7 @@ let buildMongoObj = () => {
     // Loop through each key 
     keys.forEach((key: redisObj, idx: number) => {
       // Get the key value pairs by key
-      redisClient.hgetall(keys[idx], function(err, obj) {
+      redisClient.hgetall(keys[idx], (err, obj) => {
         if (findIndexOfProp(mongoOutput, 'type', obj.product_id) === -1) {
           // If type doesn't exist, add new type object to mongo array.
           // Set the start date
@@ -63,29 +66,37 @@ let buildMongoObj = () => {
             items: {
               starttime: startDate,
               endtime: '',
+              startprice: 0,
+              endprice: 0,
               buys: 0,
               sells: 0
             }
           }
           // Include object in array
           mongoOutput.push(newArray)
-        } else {
-          // Else iterate the buys and sells
-          let objIdx = findIndexOfProp(mongoOutput, 'type', obj.product_id)
-          // Changes the object time.  When loop ends, should be the end time for each type
-          mongoOutput[objIdx].items.endtime = obj.time
-          if (obj.side === 'buy') {
-            mongoOutput[objIdx].items.buys++
-          } else {
-            mongoOutput[objIdx].items.sells++
-          }
-
         }
-        console.log(JSON.stringify(mongoOutput))
+
+        // Else iterate the buys and sells
+        let objIdx = findIndexOfProp(mongoOutput, 'type', obj.product_id)
+        // Changes the object time.  When loop ends, should be the end time for each type
+        mongoOutput[objIdx].items.endtime = new Date(obj.time).getTime()
+        mongoOutput[objIdx].items.startprice = (mongoOutput[objIdx].items.startprice === 0 && obj.price) ? obj.price : mongoOutput[objIdx].items.startprice
+        mongoOutput[objIdx].items.endprice = (obj.price) ? obj.price : mongoOutput[objIdx].items.endprice
+        if (obj.side === 'buy') {
+          mongoOutput[objIdx].items.buys++
+        } else {
+          mongoOutput[objIdx].items.sells++
+        }
+         
+        redisClient.del(key)
+        if (idx === keys.length - 1) {
+          console.log(idx)
+          console.log(JSON.stringify(mongoOutput))
+          setTimeout(buildMongoObj, 60000)
+        }
       })
     })
   })
-  return mongoOutput
 }
 
 let getBuySell = (mongoOutput) => {
@@ -106,8 +117,7 @@ let insertDocuments = function(db, callback) {
 websocket.on('message', (data: dataObj) => {
   if (!(data.type === 'done' && data.reason === 'filled'))
          return
-  
-  buildMongoObj()
+         
   let date = new Date()
   let month = (date.getMonth().toString().length < 2) ? '0' + (Math.floor(date.getMonth()) + 1).toString() : (Math.floor(date.getMonth()) + 1).toString()
   let dateString = date.getFullYear() + '-' + month + '-' + date.getDate() + ' ' + date.getHours() + '_' + date.getMinutes() + '_' + date.getSeconds() + '.' + date.getMilliseconds()
@@ -120,6 +130,7 @@ websocket.on('message', (data: dataObj) => {
       //console.dir(result)
     }
   })
+
 })
 
 websocket.on('error', err => {
@@ -128,3 +139,5 @@ websocket.on('error', err => {
 websocket.on('close', () => {
   /* ... */
 })
+
+setTimeout(buildMongoObj, 60000)

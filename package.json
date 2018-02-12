@@ -9,8 +9,10 @@
   "author": "Stefan Holodnick",
   "license": "GPL-2.0",
   "dependencies": {
+    "@types/bluebird": "^3.5.20",
     "@types/mongodb": "^3.0.5",
     "@types/redis": "^2.8.5",
+    "bluebird": "^3.5.1",
     "gdax": "^0.5.1",
     "mongodb": "^3.0.2",
     "redis": "^2.8.0"
